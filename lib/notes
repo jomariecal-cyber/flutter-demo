@@ -1,0 +1,18 @@
+main.dart:
+    holds the entry point of the app, inside the void main function.
+
+void main() {
+  runApp(const MyApp());
+}
+--- main(): The entry point. It tells the app to launch.
+
+class MyApp extends StatelessWidget { ... },
+
+--- this is the main entry point of the app
+--- MyApp is the root widget
+
+classes are something like the introduction where there is something to build in flutter like another pages.
+
+
+navigator.push is the function for transitioning to other pages.
+
