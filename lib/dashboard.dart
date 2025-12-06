@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_demo/features/loan.dart';
 import 'package:flutter_demo/ui/dashboard_tile.dart';
 
 import 'features/qrcode.dart';
@@ -105,11 +106,30 @@ class DashboardScreen extends StatelessWidget {
 
             // TILE 2: Navigates to a green page
             ReusableTile(
-              title: "Settings",
+              title: "Loans",
               icon: Icons.settings,
               color: Colors.green,
+              // sliding UP
               onTap: () {
-                _navigateToPage(context, "Settings Page", Colors.green);
+                Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) => const loan(),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      // Start from bottom (x=0, y=1) and go to center (x=0, y=0)
+                      const begin = Offset(0.0, 1.0);
+                      const end = Offset.zero;
+                      const curve = Curves.ease;
+
+                      var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+                      return SlideTransition(
+                        position: animation.drive(tween),
+                        child: child,
+                      );
+                    },
+                  ),
+                );
               },
             ),
 
