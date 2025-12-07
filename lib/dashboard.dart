@@ -116,7 +116,7 @@ class DashboardScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) => const loan(),
+                    pageBuilder: (context, animation, secondaryAnimation) => LoanFormScreen(),
                     transitionsBuilder: (context, animation, secondaryAnimation, child) {
                       // Start from bottom (x=0, y=1) and go to center (x=0, y=0)
                       const begin = Offset(0.0, 1.0);

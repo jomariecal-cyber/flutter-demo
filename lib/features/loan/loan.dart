@@ -1,280 +1,319 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-//import 'package:i_am_rich/loanapp/loan_details.dart';
 
-class loan extends StatefulWidget {
-  const loan({super.key});
-
+class LoanFormScreen extends StatefulWidget {
   @override
-  State<loan> createState() => _loanState();
+  _LoanFormScreenState createState() => _LoanFormScreenState();
 }
 
-class _loanState extends State<loan> {
-  String? selectedInstiName;
-  int? selectedInstiValue;
-  String? selectedTerm;
+class _LoanFormScreenState extends State<LoanFormScreen> {
+  String? selectedInstitution;
+  String? selectedLoanTerm;
+  TextEditingController loanBalanceController = TextEditingController();
+  TextEditingController loanAmountController = TextEditingController();
 
-  //loan Details
-
-  final List<Map<String, dynamic>> institutions = [
-    {"name": "CARD RBI", "value": 100},
-    {"name": "CARD INC.", "value": 200},
-  ];
-
-  final List<String> terms = [];
-  List<String> loanTerms = [];
   bool isLoadingTerms = true;
+  List<String> loanTerms = [];
 
-  final TextEditingController balanceController = TextEditingController();
-  final TextEditingController amountController = TextEditingController();
+  bool isLoadingDetails = false;
+  List<String> loanDetails = [];
 
+  bool isLoadingtermValues = true;
+  Map<String, int> termValues = {};
 
+  @override
+  void initState() {
+    super.initState();
+    fetchLoanTerms(); // ✅ only fetch terms, don’t submit immediately
+  }
+
+  // Fetch loan terms from API ==========================================================
   Future<void> fetchLoanTerms() async {
-    final url = Uri.parse("https://dev-api-janus.fortress-asya.com:18003/getLoanTermV2");
-
     try {
       final response = await http.post(
-        url,
+        Uri.parse("https://rbi-janus.fortress-asya.com:443/getLoanTermV2"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "frequency": "Weekly",
-          "amount": 0,
-          "product_code": 301
+         // "amount": 0,
+          "product_code": 301,
         }),
       );
 
+
+      // PRINT STATUS
+      print("Status Code: ${response.statusCode}");
+
+      // PRINT RAW BODY
+      print("Raw Response for getLoanTermV2: ${response.body}");
+
+      // PRINT JSON DECODED
+      final data = jsonDecode(response.body);
+      print("Decoded JSON: $data");
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // Assuming response looks like { "terms": [6, 12, 18, 24] }
-        List<dynamic> termsFromApi = data["data"];
-        print(termsFromApi);
-
+        List<dynamic> termsFromApi = data["data"] as List<dynamic>;
         setState(() {
-          print('ecaljomari');
-          //loanTerms = termsFromApi.map((term) => term.toString()).toList();
-          loanTerms = termsFromApi.map((term) => term["title"].toString()).toList();
+          loanTerms =
+              termsFromApi.map((term) => term["title"].toString()).toList(); // store the values for dropdown
+
+          // also store id/value mapping so you can fetch n easily
+          termValues =
+          { for (var term in termsFromApi) term["title"]: term["value"]};
+
           isLoadingTerms = false;
         });
       } else {
-        throw Exception("Failed to load loan terms: ${response.statusCode}");
+        setState(() => isLoadingTerms = false);
+        print("❌ Failed to load loan terms: ${response.body}");
       }
     } catch (e) {
-      print("Error fetching loan terms: $e");
-      setState(() {
-        isLoadingTerms = false;
-      });
+      setState(() => isLoadingTerms = false);
+      print("❌ Exception fetching terms: $e");
     }
   }
 
-// loan details declaration
-  Map<String, dynamic>? loanDetails;
+  // Submit and navigate ================================================================
+  Future<void> submitLoanDetails() async {
+    if (selectedInstitution == null ||
+        selectedLoanTerm == null ||
+        loanBalanceController.text.isEmpty ||
+        loanAmountController.text.isEmpty) {
 
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please complete all fields")),
+      );
+      return;
+    }
 
-  Future<Map<String, dynamic>> fetchLoanDetails() async {
-    final url = Uri.parse("https://dev-api-janus.fortress-asya.com:18003/loanCalculator");
+    final url = Uri.parse(
+        "https://prod-api-janus.fortress-asya.com:8114/loanCalculator");
 
     final body = {
-      "instiCode": "100",
-      "loanBalance": 9000,
-      "principal": "3000",
-      "n": 4,
+      "instiCode": selectedInstitution,
+      "loanBalance": int.tryParse(loanBalanceController.text) ?? 0,
+      "principal": int.tryParse(loanAmountController.text) ?? 0,
+      // "n":  int.tryParse(selectedLoanTerm ?? "0") ?? 0,
+      "n": termValues[selectedLoanTerm] ?? 0, // <-- only number from API
       "meetingDay": 3,
       "loanProductCode": 302,
       "withDST": 0,
       "isLumpsum": 0,
       "frequency": 50,
-      "dateReleased": "2025-09-04 09:25:59.496478"
+      "dateReleased": DateTime.now().toIso8601String(),
     };
 
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(body),
-    );
+    print("📤 Request Body: ${jsonEncode(body)}");
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data["data"]; // 🔥 Only return the useful map
-    } else {
-      throw Exception("Failed to fetch loan details: ${response.statusCode}");
+    try {
+      setState(() => isLoadingDetails = true);
+
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final loanData = jsonDecode(response.body);
+
+        print("✅ Loan details fetched successfully: $loanData");
+
+        final data = loanData["data"] as Map<String, dynamic>;
+        showLoanDetailsModal(context, data);
+
+        setState(() {
+          loanDetails =
+              data.entries.map((e) => "${e.key}: ${e.value}").toList();
+          isLoadingDetails = false;
+        });
+      } else {
+        setState(() => isLoadingDetails = false);
+        print(
+            "❌ Failed with status: ${response.statusCode}, body: ${response.body}");
+        _showErrorDialog("Failed to submit loan details");
+      }
+    } catch (e) {
+      setState(() => isLoadingDetails = false);
+      print("❌ Exception: $e");
+      _showErrorDialog("An error occurred: $e");
     }
   }
 
-
-  // need to init state to check if the fetchloanterms setstate is calling
-  @override
-  void initState() {
-    fetchLoanTerms();
-    fetchLoanDetails();
-    super.initState();
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Error"),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
+  // Show loan details modal ============================================================
+  void showLoanDetailsModal(BuildContext context, Map<String, dynamic> data) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.95,
+          minChildSize: 0.3,
+          maxChildSize: 1.0,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 50,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  "Loan Details",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    children:
+                    //  Filter out 'amortization' before creating ListTile
+                    data.entries
+                        .where((e) => e.key.toLowerCase() != "amortization") // 🔹 added this line
+                        .map((e) => ListTile(
+                      title: Text("${e.key}: ${e.value}"),
+                    ))
+                        .toList(),
+                  ),
+                ),
+
+
+                // Expanded(
+                //   child: ListView(
+                //     controller: scrollController,
+                //     children: data.entries
+                //         .map((e) => ListTile(
+                //       title: Text("${e.key}: ${e.value}"),
+                //     ))
+                //         .toList(),
+                //   ),
+                // ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                      backgroundColor: Colors.blue,
+                    ),
+                    child: const Text("Done", style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // UI ================================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text("Personal Info"),
-      ),
-      body: Container(
-        color: Colors.grey.shade50,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+      appBar: AppBar(title: const Text("Loan Application")),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Please select an Institution"),
-              const SizedBox(
-                height: 10,
-              ),
-
-
-
-              Center(
-                child: DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: "Choose Institution",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onChanged: (newValue) {
-                    setState(() {
-                      selectedInstiName= newValue;
-                      selectedInstiValue = institutions
-                          .firstWhere((insti) => insti["name"] == newValue) ["value"];
-                    });
-                    print("Selected: $selectedInstiName, Value: $selectedInstiValue");
-                  },
-                  items: institutions.map((insti) {
-                    return DropdownMenuItem<String>(
-                      value: insti["name"],
-                      child: Text(insti["name"]),
-                    );
-                  }).toList(),
+              // Institution Dropdown
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: "Select Institution",
+                  border: OutlineInputBorder(),
                 ),
+                items: const [
+                  DropdownMenuItem(value: "100", child: Text("Institution 1")),
+                  DropdownMenuItem(value: "200", child: Text("Institution 2")),
+                ],
+                onChanged: (val) =>
+                    setState(() => selectedInstitution = val),
+              ),
+              const SizedBox(height: 16),
 
-              ),
-              const SizedBox(
-                height: 20,
-              ),
+              // Loan Balance
               TextField(
-                keyboardType: TextInputType.number,
-                //controller: textController,
-                decoration: InputDecoration(
-                  labelText: "Enter your loan Balance",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                controller: loanBalanceController,
+                decoration: const InputDecoration(
+                  labelText: "Enter Loan Balance",
+                  border: OutlineInputBorder(),
                 ),
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              TextField(
                 keyboardType: TextInputType.number,
-                //controller: textController,
-                decoration: InputDecoration(
-                  labelText: "Enter your loan Amount",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
+              // Loan Amount
+              TextField(
+                controller: loanAmountController,
+                decoration: const InputDecoration(
+                  labelText: "Enter Loan Amount",
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+
+              // Loan Term Dropdown
               isLoadingTerms
                   ? const CircularProgressIndicator()
                   : DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: "Choose Loan Term",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                decoration: const InputDecoration(
+                  labelText: "Select Loan Term",
+                  border: OutlineInputBorder(),
                 ),
-                value: selectedTerm,
-                onChanged: (newValue) {
-                  setState(
-                        () {
-
-                      isLoadingTerms = false;
-                      selectedTerm = newValue;
-                    },
+                items: loanTerms.map((title) {
+                  return DropdownMenuItem(
+                    value: title,
+                    child: Text(title),
                   );
-                },
-                items: loanTerms.map(
-                      (item) {
-                    return DropdownMenuItem(
-                      value: item,
-                      child: Text(item, ),
-
-                    );
-                  },
-                ).toList(),
+                }).toList(),
+                value: selectedLoanTerm,
+                onChanged: (val) =>
+                    setState(() => selectedLoanTerm = val),
               ),
+              const SizedBox(height: 24),
 
-              SizedBox(height: 50),
-
-              // Center(
-              //   child: ElevatedButton(
-              //     onPressed: () {
-              //       print("Button pressed!");
-              //     },
-              //     child: const Text("Submit"),
-              //   ),
-              // ),
-
-
-//loan Details
-              Center(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    try {
-                      final details = await fetchLoanDetails();
-                      setState(() {
-                        loanDetails = details;
-                      });
-
-                      // Show loan details in a bottom sheet (half screen)
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                        ),
-                        builder: (context) {
-                          return Container(
-                            padding: const EdgeInsets.all(16),
-                            height: MediaQuery.of(context).size.height * 0.5, // Half screen
-                            child: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Center(child: const Text("Loan Details", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
-                                  const SizedBox(height: 10),
-                                  Text(loanDetails.toString()), // Replace with styled fields
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Error: $e")),
-                      );
-                    }
-                  },
-                  child: const Text("Submit"),
-                ),
-
+              // Submit button
+              ElevatedButton(
+                onPressed: isLoadingDetails ? null : submitLoanDetails,
+                child: isLoadingDetails
+                    ? const CircularProgressIndicator(
+                  color: Color.fromARGB(255, 8, 38, 206),
+                  padding: EdgeInsets.all(5.0),
+                )
+                    : const Text("Submit"),
               )
-
             ],
-
           ),
         ),
       ),
