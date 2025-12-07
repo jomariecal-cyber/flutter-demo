@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_demo/features/loan.dart';
+import 'package:flutter_demo/features/e-wallet/pages/home_page.dart';
+import 'package:flutter_demo/features/loan/loan.dart';
 import 'package:flutter_demo/ui/dashboard_tile.dart';
 
-import 'features/qrcode.dart';
+import 'features/qr_code/qrcode.dart';
 const Color instapayPurple = Colors.blueAccent;
 
 // --- THE DASHBOARD (GRID) ---
@@ -152,6 +153,34 @@ class DashboardScreen extends StatelessWidget {
               color: Colors.purple,
               onTap: () {
                 _navigateToPage(context, "Messages", Colors.purple);
+              },
+            ),
+
+            // TILE 5: Navigates to purple page
+            ReusableTile(
+              title: "E-wallet",
+              icon: Icons.account_balance_wallet_rounded,
+              color: Colors.purple,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) => const HomePage(),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      // Start from bottom (x=0, y=1) and go to center (x=0, y=0)
+                      const begin = Offset(0.0, 1.0);
+                      const end = Offset.zero;
+                      const curve = Curves.ease;
+
+                      var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+                      return SlideTransition(
+                        position: animation.drive(tween),
+                        child: child,
+                      );
+                    },
+                  ),
+                );
               },
             ),
           ],

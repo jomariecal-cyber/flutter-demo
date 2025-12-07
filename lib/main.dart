@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dashboard.dart';
-import 'features/qrcode.dart'; // For generating the visual QR
+import 'features/qr_code/qrcode.dart'; // For generating the visual QR
 
 
 void main() {
@@ -16,6 +16,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       // you can add a themeData whe you want a unified theme format
       theme: ThemeData(
+        fontFamily: 'Poppins',
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
           seedColor:  Colors.blueAccent, // <--- YOUR CUSTOM COLOR HERE
