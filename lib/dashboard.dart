@@ -4,6 +4,7 @@ import 'package:flutter_demo/features/loan/loan.dart';
 import 'package:flutter_demo/ui/dashboard_tile.dart';
 
 import 'features/qr_code/qrcode.dart';
+import 'features/rest_api/main2.dart';
 const Color instapayPurple = Colors.blueAccent;
 
 // --- THE DASHBOARD (GRID) ---
@@ -158,6 +159,34 @@ class DashboardScreen extends StatelessWidget {
 
             // TILE 5: Navigates to purple page
             ReusableTile(
+              title: "Rest-API",
+              icon: Icons.account_balance_wallet_rounded,
+              color: Colors.red,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) => const MyApi(),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      // Start from bottom (x=0, y=1) and go to center (x=0, y=0)
+                      const begin = Offset(0.0, 1.0);
+                      const end = Offset.zero;
+                      const curve = Curves.ease;
+
+                      var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+                      return SlideTransition(
+                        position: animation.drive(tween),
+                        child: child,
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+
+            // TILE 6: Navigates to purple page
+            ReusableTile(
               title: "E-wallet",
               icon: Icons.account_balance_wallet_rounded,
               color: Colors.purple,
@@ -183,6 +212,8 @@ class DashboardScreen extends StatelessWidget {
                 );
               },
             ),
+
+
           ],
         ),
       ),

@@ -33,33 +33,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+   return  PopScope(
+    canPop: false, // prevents automatic popping
+    onPopInvoked: (didPop) {
+      if (!didPop) {
+        Navigator.pop(context); // manually go back
+      }
+    },
+    child: Scaffold(
       appBar: AppBar(
         title: Text('data'),
         backgroundColor: Colors.blue,
       ),
-      // 9 Add this to show on the screen
       body: ListView.builder(
         itemCount: users.length,
-        itemBuilder: (context,index){
+        itemBuilder: (context, index) {
           final user = users[index];
           final name = user['name']['first'];
           final email = user['email'];
           final imageUrl = user['picture']['thumbnail'];
-        return ListTile(
-          // 10 add some add. decoration
-          leading: ClipRRect(
-            borderRadius: BorderRadius.circular(100),
-            child: CircleAvatar(
-              child: Image.network(imageUrl)
-              )
-            ),
 
-          subtitle: Text(name),
-          title: Text(email),
-        );
-      }
-    ),
+          return ListTile(
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(100),
+              child: CircleAvatar(
+                child: Image.network(imageUrl),
+              ),
+            ),
+            subtitle: Text(name),
+            title: Text(email),
+          );
+        },
+      ),
 
       // 3 under this make a button
       floatingActionButton: FloatingActionButton(
@@ -67,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
         shape: CircleBorder(),
         onPressed: fetchUsers,
         ),
+    ),
     );
   }
 
