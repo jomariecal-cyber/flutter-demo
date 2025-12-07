@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import '../../qr_code/qrcode.dart';
 import '../utilities/my_buttons.dart';
 import '../utilities/my_cards.dart';
 import '../utilities/my_list_tiles.dart';
@@ -21,11 +22,31 @@ class HomePage extends StatefulWidget {
         floatingActionButtonLocation: FloatingActionButtonLocation.miniCenterDocked, //Button allignment
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-           // 
+            {
+              Navigator.push(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) => const InstapayLearningPage(),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    // Start from bottom (x=0, y=1) and go to center (x=0, y=0)
+                    const begin = Offset(0.0, 1.0);
+                    const end = Offset.zero;
+                    const curve = Curves.ease;
+
+                    var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+                    return SlideTransition(
+                      position: animation.drive(tween),
+                      child: child,
+                    );
+                  },
+                ),
+              );
+            };
           },
-          backgroundColor: Colors.purple.shade400,
+          backgroundColor: Colors.red,
           shape: CircleBorder(),
-          child: Icon(Icons.add, color: Colors.white,),
+          child: Icon(Icons.qr_code_2_outlined, color: Colors.white,),
         ),
         bottomNavigationBar: BottomAppBar(
           shape: AutomaticNotchedShape(
