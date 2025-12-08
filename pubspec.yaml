@@ -19,6 +19,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_native_splash: ^2.2.18
+  flutter_launcher_icons: ^0.14.0
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/splash2.png" # must be a single PNG file
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true
@@ -26,7 +34,7 @@ flutter:
   # Assets
   assets:
     - lib/components/icons/
-
+    - assets/splash2.png
 
   # Fonts
   fonts:
@@ -34,3 +42,9 @@ flutter:
       fonts:
         - asset: lib/components/fonts/Poppins-Bold.ttf
         - asset: lib/components/fonts/Poppins-Regular.ttf
+
+flutter_native_splash:
+  ios: false
+  android: true
+  image: assets/splash2.png
+  color: "#E3FA26"
