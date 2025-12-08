@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.example.flutter_demo"
-    compileSdk = 36      // update to latest stable, >=35 for flutter_native_splash
+    compileSdk = 36  // KEEPING 36 AS REQUESTED
 
     defaultConfig {
         applicationId = "com.example.flutter_demo"
         minSdk = flutter.minSdkVersion
-        targetSdk = 36    // also update targetSdk
+        targetSdk = 36  // KEEPING 36 AS REQUESTED
         versionCode = 1
         versionName = "1.0.0"
     }
@@ -34,4 +34,13 @@ android {
 
 flutter {
     source = "../.."
+}
+
+// --- ADD THIS BLOCK TO FIX SDK 36 COMPATIBILITY ---
+dependencies {
+    // Fixes "lStar not found" by forcing a newer Core library compatible with SDK 36
+    implementation("androidx.core:core-ktx:1.13.1")
+
+    // Fixes "windowSplashScreen" errors by providing the missing splash definitions
+    implementation("androidx.core:core-splashscreen:1.0.1")
 }
